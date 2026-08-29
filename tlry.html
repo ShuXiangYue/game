@@ -120,6 +120,12 @@
             gap: 6px;
             align-items: flex-end;
         }
+        .ctrl-group-row {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
         .ctrl-btn {
             background: rgba(40, 40, 70, 0.75);
             backdrop-filter: blur(4px);
@@ -188,6 +194,8 @@
             background: rgba(50, 200, 100, 0.6);
             border-color: #5aff8a;
             font-size: 18px;
+            width: 58px;
+            height: 58px;
         }
         .ctrl-btn.action-jump:active {
             background: rgba(70, 230, 120, 0.85);
@@ -281,6 +289,14 @@
             font-size: 8px;
             color: #888;
             opacity: 0.5;
+        }
+
+        /* 工具栏（挖掘、放置、模式、攻击） */
+        .toolbar {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            flex-wrap: wrap;
         }
 
         /* ===== 暂停菜单 ===== */
@@ -378,16 +394,20 @@
                 font-size: 18px;
                 border-radius: 12px;
             }
-            .ctrl-btn.small {
-                width: 40px;
-                height: 40px;
-                font-size: 14px;
-            }
-            .ctrl-btn.action-attack,
             .ctrl-btn.action-jump {
                 width: 44px;
                 height: 44px;
                 font-size: 16px;
+            }
+            .ctrl-btn.action-attack {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+            .ctrl-btn.action-mode {
+                width: 44px;
+                height: 44px;
+                font-size: 12px;
             }
             .inv-slot {
                 width: 38px;
@@ -426,16 +446,20 @@
                 font-size: 14px;
                 border-radius: 10px;
             }
-            .ctrl-btn.small {
-                width: 34px;
-                height: 34px;
-                font-size: 12px;
-            }
-            .ctrl-btn.action-attack,
             .ctrl-btn.action-jump {
                 width: 36px;
                 height: 36px;
                 font-size: 14px;
+            }
+            .ctrl-btn.action-attack {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+            .ctrl-btn.action-mode {
+                width: 36px;
+                height: 36px;
+                font-size: 10px;
             }
             .inv-slot {
                 width: 32px;
@@ -497,7 +521,7 @@
 
         <!-- 移动控制 & 物品栏 -->
         <div id="mobileControls">
-            <!-- 左侧：方向键（无跳跃） -->
+            <!-- 第一行：方向键 + 跳跃键（同一行，跳跃在右侧） -->
             <div class="ctrl-group">
                 <div class="dpad-grid">
                     <div class="dpad-empty"></div>
@@ -507,17 +531,18 @@
                     <button class="ctrl-btn" id="btnDown" data-key="s">▼</button>
                     <button class="ctrl-btn" id="btnRight" data-key="d">▶</button>
                 </div>
+                <!-- 跳跃键，与方向键组同高度 -->
+                <button class="ctrl-btn action-jump" id="btnJump">⬆</button>
             </div>
 
             <!-- 中间：物品栏 -->
             <div class="inventory-bar" id="inventorySlots"></div>
 
-            <!-- 右侧：模式切换、挖掘、放置、跳跃、攻击 -->
-            <div class="ctrl-group">
+            <!-- 右侧：工具栏（不含跳跃） -->
+            <div class="ctrl-group toolbar">
                 <button class="ctrl-btn action-mode" id="btnMode">⛏️</button>
                 <button class="ctrl-btn action-mine" id="btnMine">⛏</button>
                 <button class="ctrl-btn action-place" id="btnPlace">🧱</button>
-                <button class="ctrl-btn action-jump" id="btnJump">⬆</button>
                 <button class="ctrl-btn action-attack" id="btnAttack">
                     🗡️
                     <div class="cooldown-overlay" id="attackCooldownOverlay"></div>
@@ -528,7 +553,7 @@
 
     <script>
         // ============================================================
-        //  简易泰拉瑞亚  —  移动/桌面 双模  (鬼畜修复 + 跳跃键右移)
+        //  简易泰拉瑞亚  —  移动/桌面 双模  (全新物理引擎，彻底解决鬼畜)
         // ============================================================
 
         // ---------- 画布 ----------
@@ -541,8 +566,8 @@
         const TILE = 32;
         const COLS = 120;
         const ROWS = 75;
-        const GRAVITY = 0.55;
-        const MAX_FALL = 12;
+        const GRAVITY = 0.6;
+        const MAX_FALL = 10; // 限制最大下落速度，防止穿透
         const PLAYER_W = 22;
         const PLAYER_H = 34;
 
@@ -788,18 +813,19 @@
         }
 
         // ============================================================
-        //  碰撞检测与解析 (全面优化，彻底解决鬼畜)
+        //  全新物理引擎 (彻底解决鬼畜)
         // ============================================================
         function isBlockSolidAt(col, row) {
             if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return true;
             return isSolid(world[row][col]);
         }
 
+        // 检查矩形是否与实心方块碰撞
         function collidesWithWorld(px, py, pw, ph) {
             const left = Math.floor(px / TILE);
-            const right = Math.floor((px + pw - 1) / TILE);
+            const right = Math.floor((px + pw - 0.001) / TILE);
             const top = Math.floor(py / TILE);
-            const bottom = Math.floor((py + ph - 1) / TILE);
+            const bottom = Math.floor((py + ph - 0.001) / TILE);
             for (let r = top; r <= bottom; r++) {
                 for (let c = left; c <= right; c++) {
                     if (isBlockSolidAt(c, r)) return true;
@@ -808,58 +834,57 @@
             return false;
         }
 
-        // 精确碰撞解析：水平+垂直，返回修正后的位置和地面状态
-        function resolveCollision(entity, dt) {
-            const { x, y, w, h } = entity;
-            let vx = entity.vx,
-                vy = entity.vy;
-            let onGround = false;
+        // 核心碰撞解析：先水平，再垂直，精确对齐
+        function resolveEntity(entity) {
+            let { x, y, w, h, vx, vy } = entity;
 
-            // --- 水平移动 ---
+            // 水平移动
             let newX = x + vx;
-            // 水平碰撞
             if (!collidesWithWorld(newX, y, w, h)) {
-                entity.x = newX;
+                x = newX;
             } else {
                 if (vx > 0) {
-                    entity.x = Math.floor((x + w) / TILE) * TILE - w;
+                    x = Math.floor((x + w) / TILE) * TILE - w;
                 } else if (vx < 0) {
-                    entity.x = Math.floor(x / TILE) * TILE + TILE;
+                    x = Math.floor(x / TILE) * TILE + TILE;
                 }
-                entity.vx = 0;
+                vx = 0;
             }
 
-            // --- 垂直移动 ---
+            // 垂直移动
             let newY = y + vy;
-            if (!collidesWithWorld(entity.x, newY, w, h)) {
-                entity.y = newY;
+            if (!collidesWithWorld(x, newY, w, h)) {
+                y = newY;
+                entity.onGround = false;
             } else {
                 if (vy > 0) {
-                    entity.y = Math.floor((y + h) / TILE) * TILE - h;
-                    onGround = true;
+                    // 下坠碰撞，贴地
+                    y = Math.floor((y + h) / TILE) * TILE - h;
+                    entity.onGround = true;
                 } else if (vy < 0) {
-                    entity.y = Math.floor(y / TILE) * TILE + TILE;
+                    // 上升碰撞，顶头
+                    y = Math.floor(y / TILE) * TILE + TILE;
                 }
-                entity.vy = 0;
-            }
-
-            // 二次检查：如果实体在地面，但实际因为浮点误差悬空，强制贴地
-            if (onGround) {
-                // 确保y精确对齐
-                entity.y = Math.floor((entity.y + h) / TILE) * TILE - h;
+                vy = 0;
             }
 
             // 边界限制
-            if (entity.x < 0) entity.x = 0;
-            if (entity.x + entity.w > COLS * TILE) entity.x = COLS * TILE - entity.w;
-            if (entity.y < 0) entity.y = 0;
-            if (entity.y + entity.h > ROWS * TILE) {
-                entity.y = ROWS * TILE - entity.h;
-                entity.vy = 0;
-                onGround = true;
+            if (x < 0) { x = 0;
+                vx = 0; }
+            if (x + w > COLS * TILE) { x = COLS * TILE - w;
+                vx = 0; }
+            if (y < 0) { y = 0;
+                vy = 0; }
+            if (y + h > ROWS * TILE) {
+                y = ROWS * TILE - h;
+                vy = 0;
+                entity.onGround = true;
             }
 
-            return onGround;
+            entity.x = x;
+            entity.y = y;
+            entity.vx = vx;
+            entity.vy = vy;
         }
 
         // ============================================================
@@ -873,8 +898,9 @@
             let moveX = 0;
             if (keys['a'] || keys['arrowleft']) moveX = -1;
             if (keys['d'] || keys['arrowright']) moveX = 1;
+
+            // 跳跃：只有在地面且按了跳跃键
             const jumpKey = keys['w'] || keys['arrowup'] || keys[' '];
-            // 跳跃：只有在地面才能起跳
             if (jumpKey && player.onGround) {
                 vy = -10.5;
                 player.onGround = false;
@@ -890,15 +916,15 @@
                 vx *= friction;
                 if (Math.abs(vx) < 0.1) vx = 0;
             }
+
             vy += GRAVITY;
             if (vy > MAX_FALL) vy = MAX_FALL;
 
             player.vx = vx;
             player.vy = vy;
 
-            // 使用精确碰撞解析
-            const onGround = resolveCollision(player, 1);
-            player.onGround = onGround;
+            // 应用物理
+            resolveEntity(player);
 
             // 无敌帧
             if (player.invincible > 0) player.invincible--;
@@ -909,7 +935,7 @@
         }
 
         // ============================================================
-        //  敌人更新 (跳跃频率大幅降低)
+        //  敌人更新 (跳跃频率极低)
         // ============================================================
         function updateEnemies() {
             for (let i = enemies.length - 1; i >= 0; i--) {
@@ -928,7 +954,7 @@
                     e.dir = dx > 0 ? 1 : -1;
                     vx += e.dir * 0.15;
                     if (Math.abs(vx) > e.speed) vx = e.dir * e.speed;
-                    // 跳跃：概率从0.02大幅降低到0.003
+                    // 跳跃概率降至0.3%
                     if (e.onGround && Math.random() < 0.003) {
                         vy = -7;
                         e.onGround = false;
@@ -941,10 +967,7 @@
 
                 e.vx = vx;
                 e.vy = vy;
-
-                // 使用精确碰撞解析
-                const onGround = resolveCollision(e, 1);
-                e.onGround = onGround;
+                resolveEntity(e);
 
                 // 敌人攻击玩家
                 if (player.invincible === 0 && !isGameOver) {
@@ -1086,7 +1109,7 @@
         }
 
         // ============================================================
-        //  渲染 (不变)
+        //  渲染
         // ============================================================
         function drawBlock(col, row, blockType, x, y) {
             const color = getBlockColor(blockType);
@@ -1620,7 +1643,7 @@
         setupMobileButton('btnDown', 's');
         setupMobileButton('btnLeft', 'a');
         setupMobileButton('btnRight', 'd');
-        setupMobileButton('btnJump', ' '); // 跳跃键现在在右侧
+        setupMobileButton('btnJump', ' '); // 跳跃键在右侧，同高度
 
         // ---- 模式切换 ----
         const btnMode = document.getElementById('btnMode');
@@ -1721,10 +1744,10 @@
             renderInventoryUI();
         }, 250);
 
-        console.log('🎮 简易泰拉瑞亚 · 移动版 (鬼畜修复 + 跳跃键右移)');
-        console.log('💡 左侧方向键移动 | 右侧跳跃、攻击');
+        console.log('🎮 简易泰拉瑞亚 · 移动版 (物理引擎重构，鬼畜彻底解决)');
+        console.log('💡 方向键移动 | 跳跃键在右侧同高度 | 攻击键独立');
         console.log('💡 点击屏幕挖掘/放置 (切换模式) | 空格/F键攻击');
-        console.log('💡 开局10秒后刷怪，怪物跳跃频率大幅降低');
+        console.log('💡 开局10秒后刷怪，怪物跳跃概率极低');
     </script>
 </body>
 </html>
