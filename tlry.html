@@ -33,6 +33,7 @@
             transition: transform 0.2s ease;
             position: relative;
             display: inline-block;
+            max-width: 100vw;
         }
         canvas {
             display: block;
@@ -110,7 +111,7 @@
         #mobileControls {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: flex-start;
             padding: 6px 8px 4px 8px;
             gap: 6px;
             flex-wrap: wrap;
@@ -118,13 +119,10 @@
         .ctrl-group {
             display: flex;
             gap: 6px;
-            align-items: flex-end;
-        }
-        .ctrl-group-row {
-            display: flex;
-            gap: 6px;
             align-items: flex-start;
-            flex-wrap: wrap;
+        }
+        .ctrl-group.toolbar {
+            align-items: flex-end;
         }
         .ctrl-btn {
             background: rgba(40, 40, 70, 0.75);
@@ -193,9 +191,11 @@
         .ctrl-btn.action-jump {
             background: rgba(50, 200, 100, 0.6);
             border-color: #5aff8a;
-            font-size: 18px;
+            font-size: 20px;
             width: 58px;
             height: 58px;
+            align-self: flex-start; /* 顶部对齐 */
+            margin-top: 0;
         }
         .ctrl-btn.action-jump:active {
             background: rgba(70, 230, 120, 0.85);
@@ -245,6 +245,7 @@
             margin: 0 4px;
             flex-wrap: wrap;
             backdrop-filter: blur(4px);
+            align-self: center;
         }
         .inv-slot {
             width: 44px;
@@ -289,14 +290,6 @@
             font-size: 8px;
             color: #888;
             opacity: 0.5;
-        }
-
-        /* 工具栏（挖掘、放置、模式、攻击） */
-        .toolbar {
-            display: flex;
-            gap: 4px;
-            align-items: flex-end;
-            flex-wrap: wrap;
         }
 
         /* ===== 暂停菜单 ===== */
@@ -380,7 +373,7 @@
             font-size: 13px;
         }
 
-        /* 响应式调整 */
+        /* 响应式 */
         @media (max-width: 700px) {
             .dpad-grid {
                 grid-template-columns: repeat(3, 40px);
@@ -397,7 +390,7 @@
             .ctrl-btn.action-jump {
                 width: 44px;
                 height: 44px;
-                font-size: 16px;
+                font-size: 18px;
             }
             .ctrl-btn.action-attack {
                 width: 44px;
@@ -521,8 +514,8 @@
 
         <!-- 移动控制 & 物品栏 -->
         <div id="mobileControls">
-            <!-- 第一行：方向键 + 跳跃键（同一行，跳跃在右侧） -->
-            <div class="ctrl-group">
+            <!-- 左侧：方向键 + 跳跃键（同一行，跳跃在最右侧且顶部对齐） -->
+            <div class="ctrl-group" style="align-items:flex-start;">
                 <div class="dpad-grid">
                     <div class="dpad-empty"></div>
                     <button class="ctrl-btn" id="btnUp" data-key="w">▲</button>
@@ -531,7 +524,7 @@
                     <button class="ctrl-btn" id="btnDown" data-key="s">▼</button>
                     <button class="ctrl-btn" id="btnRight" data-key="d">▶</button>
                 </div>
-                <!-- 跳跃键，与方向键组同高度 -->
+                <!-- 跳跃键放在方向键右侧，顶部对齐 -->
                 <button class="ctrl-btn action-jump" id="btnJump">⬆</button>
             </div>
 
@@ -553,7 +546,7 @@
 
     <script>
         // ============================================================
-        //  简易泰拉瑞亚  —  移动/桌面 双模  (全新物理引擎，彻底解决鬼畜)
+        //  简易泰拉瑞亚  —  物理重构 + 怪物逐个生成 + 按键优化
         // ============================================================
 
         // ---------- 画布 ----------
@@ -567,7 +560,7 @@
         const COLS = 120;
         const ROWS = 75;
         const GRAVITY = 0.6;
-        const MAX_FALL = 10; // 限制最大下落速度，防止穿透
+        const MAX_FALL = 10;
         const PLAYER_W = 22;
         const PLAYER_H = 34;
 
@@ -660,9 +653,12 @@
         let isGameOver = false;
         let isPaused = false;
         let uiScale = 1.0;
-        let spawnCooldown = 600;
+
+        // 怪物生成控制
+        let totalEnemiesToSpawn = 25;
+        let enemiesSpawned = 0;
+        let spawnCooldown = 60; // 帧数间隔
         let initialSpawnDone = false;
-        let mobileAction = 'mine';
 
         // ---------- 攻击系统 ----------
         let attackCooldown = 0;
@@ -775,52 +771,74 @@
 
         function getBlockColor(block) { return BLOCK_COLORS[block] || '#888'; }
 
-        // ---------- 敌人 ----------
-        function spawnEnemy(x, y) {
-            enemies.push({
-                x,
-                y,
-                w: 26,
-                h: 24,
-                vx: 0,
-                vy: 0,
-                onGround: false,
-                health: 5,
-                maxHealth: 5,
-                speed: 0.8 + Math.random() * 0.5,
-                dir: Math.random() < 0.5 ? 1 : -1,
-                timer: 0,
-            });
-        }
-
-        function initEnemies() {
-            enemies = [];
-            for (let i = 0; i < 18; i++) {
-                const c = 10 + Math.floor(Math.random() * (COLS - 20));
+        // ---------- 敌人生成（逐个） ----------
+        function spawnEnemyAtRandom() {
+            // 在地表随机找位置
+            let attempts = 0;
+            while (attempts < 20) {
+                const c = 5 + Math.floor(Math.random() * (COLS - 10));
                 let r = 0;
                 for (let rr = 0; rr < ROWS; rr++) {
                     if (isSolid(getBlock(c, rr))) { r = rr - 1; break; }
                 }
-                if (r > 5 && r < ROWS - 5) spawnEnemy(c * TILE + TILE / 2, r * TILE);
+                if (r > 3 && r < ROWS - 3) {
+                    // 确保该位置是空气且下方有方块
+                    if (getBlock(c, r) === T.AIR && isSolid(getBlock(c, r + 1))) {
+                        enemies.push({
+                            x: c * TILE + (TILE - 26) / 2,
+                            y: r * TILE - 24 + 2,
+                            w: 26,
+                            h: 24,
+                            vx: 0,
+                            vy: 0,
+                            onGround: false,
+                            health: 5,
+                            maxHealth: 5,
+                            speed: 0.8 + Math.random() * 0.5,
+                            dir: Math.random() < 0.5 ? 1 : -1,
+                            timer: 0,
+                        });
+                        return true;
+                    }
+                }
+                attempts++;
             }
-            for (let i = 0; i < 8; i++) {
-                const c = 15 + Math.floor(Math.random() * (COLS - 30));
-                const r = 25 + Math.floor(Math.random() * (ROWS - 40));
-                if (getBlock(c, r) === T.AIR && isSolid(getBlock(c, r + 1))) {
-                    spawnEnemy(c * TILE + TILE / 2, r * TILE);
+            // 如果找不到合适位置，在玩家附近随机生成（但不重叠）
+            const px = player.x + Math.random() * 200 - 100;
+            const py = player.y - 50;
+            if (px > 0 && px < COLS * TILE && py > 0 && py < ROWS * TILE) {
+                // 检查下方有方块
+                const col = Math.floor(px / TILE);
+                const row = Math.floor(py / TILE);
+                if (row + 1 < ROWS && isSolid(getBlock(col, row + 1)) && getBlock(col, row) === T.AIR) {
+                    enemies.push({
+                        x: col * TILE + (TILE - 26) / 2,
+                        y: row * TILE - 24 + 2,
+                        w: 26,
+                        h: 24,
+                        vx: 0,
+                        vy: 0,
+                        onGround: false,
+                        health: 5,
+                        maxHealth: 5,
+                        speed: 0.8 + Math.random() * 0.5,
+                        dir: Math.random() < 0.5 ? 1 : -1,
+                        timer: 0,
+                    });
+                    return true;
                 }
             }
+            return false;
         }
 
         // ============================================================
-        //  全新物理引擎 (彻底解决鬼畜)
+        //  全新物理引擎 (彻底消除鬼畜)
         // ============================================================
         function isBlockSolidAt(col, row) {
             if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return true;
             return isSolid(world[row][col]);
         }
 
-        // 检查矩形是否与实心方块碰撞
         function collidesWithWorld(px, py, pw, ph) {
             const left = Math.floor(px / TILE);
             const right = Math.floor((px + pw - 0.001) / TILE);
@@ -834,7 +852,7 @@
             return false;
         }
 
-        // 核心碰撞解析：先水平，再垂直，精确对齐
+        // 核心解析：返回是否在地面
         function resolveEntity(entity) {
             let { x, y, w, h, vx, vy } = entity;
 
@@ -853,16 +871,16 @@
 
             // 垂直移动
             let newY = y + vy;
+            let onGround = false;
             if (!collidesWithWorld(x, newY, w, h)) {
                 y = newY;
-                entity.onGround = false;
             } else {
                 if (vy > 0) {
-                    // 下坠碰撞，贴地
+                    // 向下碰撞，贴地
                     y = Math.floor((y + h) / TILE) * TILE - h;
-                    entity.onGround = true;
+                    onGround = true;
                 } else if (vy < 0) {
-                    // 上升碰撞，顶头
+                    // 向上碰撞，顶头
                     y = Math.floor(y / TILE) * TILE + TILE;
                 }
                 vy = 0;
@@ -878,17 +896,18 @@
             if (y + h > ROWS * TILE) {
                 y = ROWS * TILE - h;
                 vy = 0;
-                entity.onGround = true;
+                onGround = true;
             }
 
             entity.x = x;
             entity.y = y;
             entity.vx = vx;
             entity.vy = vy;
+            return onGround;
         }
 
         // ============================================================
-        //  玩家更新
+        //  玩家更新 (重力仅当非地面时生效)
         // ============================================================
         function updatePlayer() {
             if (isGameOver) return;
@@ -899,9 +918,8 @@
             if (keys['a'] || keys['arrowleft']) moveX = -1;
             if (keys['d'] || keys['arrowright']) moveX = 1;
 
-            // 跳跃：只有在地面且按了跳跃键
-            const jumpKey = keys['w'] || keys['arrowup'] || keys[' '];
-            if (jumpKey && player.onGround) {
+            // 跳跃：仅在地面时触发
+            if ((keys['w'] || keys['arrowup'] || keys[' ']) && player.onGround) {
                 vy = -10.5;
                 player.onGround = false;
             }
@@ -917,14 +935,19 @@
                 if (Math.abs(vx) < 0.1) vx = 0;
             }
 
-            vy += GRAVITY;
-            if (vy > MAX_FALL) vy = MAX_FALL;
+            // 重力：仅当不在地面时施加
+            if (!player.onGround) {
+                vy += GRAVITY;
+                if (vy > MAX_FALL) vy = MAX_FALL;
+            } else {
+                vy = 0; // 地面时垂直速度归零
+            }
 
             player.vx = vx;
             player.vy = vy;
 
-            // 应用物理
-            resolveEntity(player);
+            // 物理解析
+            player.onGround = resolveEntity(player);
 
             // 无敌帧
             if (player.invincible > 0) player.invincible--;
@@ -935,7 +958,7 @@
         }
 
         // ============================================================
-        //  敌人更新 (跳跃频率极低)
+        //  敌人更新 (重力同玩家，跳跃概率极低)
         // ============================================================
         function updateEnemies() {
             for (let i = enemies.length - 1; i >= 0; i--) {
@@ -944,17 +967,16 @@
 
                 let vx = e.vx,
                     vy = e.vy;
-                vy += GRAVITY;
-                if (vy > MAX_FALL) vy = MAX_FALL;
                 e.timer++;
 
+                // AI 移动
                 const dist = Math.hypot(e.x - player.x, e.y - player.y);
                 if (dist < 300) {
                     const dx = player.x - e.x;
                     e.dir = dx > 0 ? 1 : -1;
                     vx += e.dir * 0.15;
                     if (Math.abs(vx) > e.speed) vx = e.dir * e.speed;
-                    // 跳跃概率降至0.3%
+                    // 跳跃概率 0.3%
                     if (e.onGround && Math.random() < 0.003) {
                         vy = -7;
                         e.onGround = false;
@@ -965,11 +987,19 @@
                     if (Math.abs(vx) > e.speed * 0.6) vx = e.dir * e.speed * 0.6;
                 }
 
+                // 重力：仅当不在地面时施加
+                if (!e.onGround) {
+                    vy += GRAVITY;
+                    if (vy > MAX_FALL) vy = MAX_FALL;
+                } else {
+                    vy = 0;
+                }
+
                 e.vx = vx;
                 e.vy = vy;
-                resolveEntity(e);
+                e.onGround = resolveEntity(e);
 
-                // 敌人攻击玩家
+                // 碰撞玩家
                 if (player.invincible === 0 && !isGameOver) {
                     if (e.x < player.x + player.w && e.x + e.w > player.x &&
                         e.y < player.y + player.h && e.y + e.h > player.y) {
@@ -1470,8 +1500,6 @@
             player.invincible = 0;
             isGameOver = false;
             blockPlacedCount = 0;
-            initialSpawnDone = false;
-            spawnCooldown = 600;
             enemies = [];
             inventory.slots = PLACEABLE_BLOCKS.map(b => ({ blockType: b, count: 0 }));
             inventory.slots[0].count = 40;
@@ -1484,6 +1512,11 @@
             inventory.selected = 0;
             attackCooldown = 0;
             attackFrame = 0;
+            // 重置怪物生成状态
+            totalEnemiesToSpawn = 25;
+            enemiesSpawned = 0;
+            spawnCooldown = 30; // 开局0.5秒后开始生成
+            initialSpawnDone = false;
             renderInventoryUI();
             updateHealthUI();
             document.getElementById('pauseOverlay').classList.remove('show');
@@ -1507,13 +1540,21 @@
 
             if (!isPaused) {
                 if (!isGameOver) {
+                    // --- 怪物逐个生成 ---
                     if (!initialSpawnDone) {
                         spawnCooldown--;
                         if (spawnCooldown <= 0) {
-                            initEnemies();
-                            initialSpawnDone = true;
+                            if (enemiesSpawned < totalEnemiesToSpawn) {
+                                if (spawnEnemyAtRandom()) {
+                                    enemiesSpawned++;
+                                }
+                                spawnCooldown = 60 + Math.floor(Math.random() * 60); // 1~2秒间隔
+                            } else {
+                                initialSpawnDone = true;
+                            }
                         }
                     }
+
                     updatePlayer();
                     updateEnemies();
                     updateCamera();
@@ -1643,10 +1684,11 @@
         setupMobileButton('btnDown', 's');
         setupMobileButton('btnLeft', 'a');
         setupMobileButton('btnRight', 'd');
-        setupMobileButton('btnJump', ' '); // 跳跃键在右侧，同高度
+        setupMobileButton('btnJump', ' '); // 跳跃键在右侧
 
         // ---- 模式切换 ----
         const btnMode = document.getElementById('btnMode');
+        let mobileAction = 'mine';
         btnMode.addEventListener('touchstart', (e) => {
             e.preventDefault();
             mobileAction = (mobileAction === 'mine') ? 'place' : 'mine';
@@ -1744,10 +1786,10 @@
             renderInventoryUI();
         }, 250);
 
-        console.log('🎮 简易泰拉瑞亚 · 移动版 (物理引擎重构，鬼畜彻底解决)');
-        console.log('💡 方向键移动 | 跳跃键在右侧同高度 | 攻击键独立');
-        console.log('💡 点击屏幕挖掘/放置 (切换模式) | 空格/F键攻击');
-        console.log('💡 开局10秒后刷怪，怪物跳跃概率极低');
+        console.log('🎮 简易泰拉瑞亚 · 最终版 (物理引擎重构，怪物逐个生成)');
+        console.log('💡 方向键移动 | 跳跃键在右侧顶部 | 攻击键独立');
+        console.log('💡 地面时重力失效，彻底消除鬼畜');
+        console.log('💡 怪物每1-2秒生成一只，共25只，开局0.5秒后开始');
     </script>
 </body>
 </html>
