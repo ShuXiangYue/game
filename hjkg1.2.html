@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 黄金矿工</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+        .game-wrapper {
+            background: #16213e;
+            border-radius: 24px;
+            padding: 20px 30px 30px 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 215, 0, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            position: relative;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 20px;
+            margin-bottom: 14px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 215, 0, 0.08);
+            color: #e8d5b5;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 14px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 215, 0, 0.06);
+        }
+        .header .stat .icon {
+            font-size: 20px;
+        }
+        .header .stat .value {
+            color: #ffd700;
+            font-size: 20px;
+            min-width: 30px;
+            text-align: center;
+        }
+        .header .stat .value.gold {
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        .header .stat .value.target {
+            color: #ff6b6b;
+        }
+        .header .stat .value.level {
+            color: #74b9ff;
+        }
+        .canvas-wrap {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 215, 0, 0.1);
+            background: #0f0f1a;
+        }
+        canvas {
+            display: block;
+            width: 800px;
+            height: 600px;
+            background: radial-gradient(ellipse at bottom, #1a1a2e 0%, #0a0a15 100%);
+            cursor: crosshair;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            color: #8888aa;
+            font-size: 14px;
+            padding: 0 6px;
+        }
+        .footer .hint {
+            color: #aabbdd;
+            letter-spacing: 0.5px;
+        }
+        .footer .hint span {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .btn-restart {
+            background: rgba(255, 215, 0, 0.12);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            padding: 6px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-restart:hover {
+            background: rgba(255, 215, 0, 0.2);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.1);
+            transform: scale(1.02);
+        }
+        /* 移动端适配 */
+        @media (max-width: 860px) {
+            .game-wrapper {
+                padding: 12px;
+                border-radius: 16px;
+            }
+            canvas {
+                width: 100% !important;
+                height: auto !important;
+                aspect-ratio: 800 / 600;
+            }
+            .header {
+                font-size: 14px;
+                padding: 6px 12px;
+                gap: 6px;
+            }
+            .header .stat {
+                padding: 2px 10px;
+            }
+            .header .stat .icon {
+                font-size: 16px;
+            }
+            .header .stat .value {
+                font-size: 16px;
+            }
+            .footer {
+                font-size: 12px;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+            }
+        }
+        @media (max-width: 480px) {
+            .header .stat .label {
+                display: none;
+            }
+            .header .stat {
+                padding: 2px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <div class="header" id="header">
+            <div class="stat">
+                <span class="icon">💰</span>
+                <span class="label">分数</span>
+                <span class="value gold" id="scoreDisplay">0</span>
+            </div>
+            <div class="stat">
+                <span class="icon">🏆</span>
+                <span class="label">目标</span>
+                <span class="value target" id="targetDisplay">400</span>
+            </div>
+            <div class="stat">
+                <span class="icon">📈</span>
+                <span class="label">关卡</span>
+                <span class="value level" id="levelDisplay">1</span>
+            </div>
+            <div class="stat">
+                <span class="icon">🎯</span>
+                <span class="label">剩余</span>
+                <span class="value" id="chancesDisplay" style="color:#ff9ff3;">10</span>
+            </div>
+        </div>
+
+        <div class="canvas-wrap">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+
+        <div class="footer">
+            <div class="hint">
+                🖱️ <span>点击</span> 释放钩子 · 抓取金矿赚分数
+            </div>
+            <button class="btn-restart" id="restartBtn">🔄 重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  🎮  黄 金 矿 工  —— 完 整 游 戏 逻 辑
+        //  版本: v1.2  (每关递增400，钩爪放大，版本号显示)
+        // ============================================================
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = 800,
+            H = 600;
+
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const targetDisplay = document.getElementById('targetDisplay');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const chancesDisplay = document.getElementById('chancesDisplay');
+
+        // ============================================================
+        //  配 置 参 数
+        // ============================================================
+        const CONFIG = {
+            minerX: 400,
+            minerY: 555,
+            minerRadius: 28,
+
+            hookMaxLen: 460,
+            hookSpeedOut: 9,
+            hookSpeedIn: 6.5,
+            hookSwingSpeed: 0.025,
+            hookAngleMin: -1.35,
+            hookAngleMax: 1.35,
+
+            mineralCountBase: 8,
+            mineralCountPerLevel: 2,
+            mineralMaxCount: 22,
+
+            targetBase: 400,
+            targetPerLevel: 400,      // 每关提升400 (原200)
+            chancesPerLevel: 10,
+
+            goldSmall: 50,
+            goldMedium: 150,
+            goldLarge: 280,
+            diamond: 600,
+            stone: 15,
+        };
+
+        // ============================================================
+        //  游 戏 状 态
+        // ============================================================
+        const game = {
+            score: 0,
+            level: 1,
+            target: CONFIG.targetBase,
+            chances: CONFIG.chancesPerLevel,
+            minerals: [],
+            hook: {
+                angle: 0,
+                length: 0,
+                maxLen: CONFIG.hookMaxLen,
+                state: 'aiming',
+                targetMineral: null,
+                speed: 0,
+                dir: 1,
+            },
+            isGameOver: false,
+            isLevelComplete: false,
+            particles: [],
+            floatingTexts: [],
+            animId: null,
+        };
+
+        // ============================================================
+        //  工 具 函 数
+        // ============================================================
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+
+        function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+        function dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        function lineCircleIntersect(x1, y1, x2, y2, cx, cy, r) {
+            const dx = x2 - x1,
+                dy = y2 - y1;
+            const fx = x1 - cx,
+                fy = y1 - cy;
+            const a = dx * dx + dy * dy;
+            const b = 2 * (fx * dx + fy * dy);
+            const c = fx * fx + fy * fy - r * r;
+            let discriminant = b * b - 4 * a * c;
+            if (discriminant < 0) return { hit: false };
+            discriminant = Math.sqrt(discriminant);
+            const t1 = (-b - discriminant) / (2 * a);
+            const t2 = (-b + discriminant) / (2 * a);
+            let t = -1;
+            if (t1 >= 0 && t1 <= 1) t = t1;
+            else if (t2 >= 0 && t2 <= 1) t = t2;
+            if (t < 0) return { hit: false };
+            const px = x1 + t * dx,
+                py = y1 + t * dy;
+            return { hit: true, distance: t, cx: px, cy: py };
+        }
+
+        // ============================================================
+        //  矿 物 类
+        // ============================================================
+        function createMineral(type, x, y) {
+            const types = {
+                goldSmall: { radius: 13, value: CONFIG.goldSmall, color: '#f7c948', label: '小金', glow: '#f0d080' },
+                goldMedium: { radius: 22, value: CONFIG.goldMedium, color: '#e8b830', label: '中金', glow: '#e8c060' },
+                goldLarge: { radius: 32, value: CONFIG.goldLarge, color: '#d4a020', label: '大金', glow: '#d4b040' },
+                diamond: { radius: 10, value: CONFIG.diamond, color: '#7fdbff', label: '钻石', glow: '#a8e6ff' },
+                stone: { radius: 18, value: CONFIG.stone, color: '#8a8a8a', label: '石头', glow: '#b0b0b0' },
+            };
+            const t = types[type];
+            return {
+                type: type,
+                x: x,
+                y: y,
+                radius: t.radius,
+                value: t.value,
+                color: t.color,
+                label: t.label,
+                glow: t.glow,
+                alive: true,
+                captured: false,
+                scale: 1,
+                sparkle: rand(0, Math.PI * 2),
+            };
+        }
+
+        function generateMinerals(level) {
+            const count = Math.min(
+                CONFIG.mineralCountBase + (level - 1) * CONFIG.mineralCountPerLevel,
+                CONFIG.mineralMaxCount
+            );
+            const minerals = [];
+            const margin = 50;
+            const topY = 70;
+            const bottomY = 450;
+
+            const forcedTypes = ['goldLarge', 'diamond'];
+            for (const type of forcedTypes) {
+                let attempts = 0;
+                let placed = false;
+                while (!placed && attempts < 50) {
+                    const x = rand(margin + 30, W - margin - 30);
+                    const y = rand(topY + 30, bottomY - 30);
+                    let overlap = false;
+                    for (const m of minerals) {
+                        if (dist(x, y, m.x, m.y) < m.radius + 35) { overlap = true; break; }
+                    }
+                    if (!overlap) {
+                        minerals.push(createMineral(type, x, y));
+                        placed = true;
+                    }
+                    attempts++;
+                }
+            }
+
+            const pool = ['goldSmall', 'goldSmall', 'goldMedium', 'goldMedium', 'goldLarge', 'stone', 'stone', 'diamond'];
+            const extra = [];
+            for (let i = 0; i < Math.min(level, 5); i++) extra.push('goldMedium');
+            for (let i = 0; i < Math.min(level, 3); i++) extra.push('goldLarge');
+            const fullPool = [...pool, ...extra];
+
+            while (minerals.length < count) {
+                const type = fullPool[randInt(0, fullPool.length - 1)];
+                const x = rand(margin + 20, W - margin - 20);
+                const y = rand(topY + 20, bottomY - 20);
+                let overlap = false;
+                const r = createMineral(type, x, y).radius;
+                for (const m of minerals) {
+                    if (dist(x, y, m.x, m.y) < m.radius + r + 30) { overlap = true; break; }
+                }
+                if (!overlap) {
+                    minerals.push(createMineral(type, x, y));
+                }
+                if (minerals.length > 30) break;
+            }
+            return minerals;
+        }
+
+        // ============================================================
+        //  粒 子 & 浮 动 文 字
+        // ============================================================
+        function addParticles(x, y, color, count = 20) {
+            for (let i = 0; i < count; i++) {
+                const angle = rand(0, Math.PI * 2);
+                const speed = rand(1, 5);
+                game.particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1,
+                    life: rand(20, 50),
+                    maxLife: 50,
+                    radius: rand(2, 5),
+                    color: color,
+                    decay: rand(0.02, 0.05),
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#ffd700') {
+            game.floatingTexts.push({
+                x,
+                y,
+                text: text,
+                color: color,
+                life: 60,
+                vy: -2,
+                scale: 1.2,
+            });
+        }
+
+        // ============================================================
+        //  钩 子 操 作
+        // ============================================================
+        function getHookTip() {
+            const h = game.hook;
+            const angle = h.angle;
+            const len = h.length;
+            const sx = CONFIG.minerX,
+                sy = CONFIG.minerY;
+            return {
+                x: sx + Math.sin(angle) * len,
+                y: sy - Math.cos(angle) * len,
+            };
+        }
+
+        function startShooting() {
+            const h = game.hook;
+            if (h.state !== 'aiming' || game.isGameOver || game.isLevelComplete) return;
+            h.state = 'shooting';
+            h.speed = CONFIG.hookSpeedOut;
+            h.length = 20;
+            h.targetMineral = null;
+        }
+
+        function updateHook() {
+            const h = game.hook;
+            const minerX = CONFIG.minerX,
+                minerY = CONFIG.minerY;
+
+            if (h.state === 'aiming') {
+                h.angle += CONFIG.hookSwingSpeed * h.dir;
+                if (h.angle > CONFIG.hookAngleMax) { h.angle = CONFIG.hookAngleMax;
+                    h.dir = -1; }
+                if (h.angle < CONFIG.hookAngleMin) { h.angle = CONFIG.hookAngleMin;
+                    h.dir = 1; }
+                h.length = 18;
+                return;
+            }
+
+            if (h.state === 'shooting') {
+                h.length += h.speed;
+                const tip = getHookTip();
+
+                if (h.length >= h.maxLen || tip.x < 0 || tip.x > W || tip.y < 0 || tip.y > H) {
+                    h.state = 'retrieving';
+                    h.speed = CONFIG.hookSpeedIn;
+                    return;
+                }
+
+                const sx = minerX,
+                    sy = minerY;
+                let hitMineral = null;
+                let minDist = Infinity;
+
+                for (const m of game.minerals) {
+                    if (!m.alive || m.captured) continue;
+                    const result = lineCircleIntersect(sx, sy, tip.x, tip.y, m.x, m.y, m.radius);
+                    if (result.hit && result.distance < minDist) {
+                        minDist = result.distance;
+                        hitMineral = m;
+                    }
+                }
+
+                if (hitMineral) {
+                    h.targetMineral = hitMineral;
+                    hitMineral.captured = true;
+                    h.state = 'retrieving';
+                    h.speed = CONFIG.hookSpeedIn;
+                    addParticles(hitMineral.x, hitMineral.y, hitMineral.color, 25);
+                    addFloatingText(hitMineral.x, hitMineral.y - 20, '🎯 抓住!', '#7fdbff');
+                    return;
+                }
+                return;
+            }
+
+            if (h.state === 'retrieving') {
+                h.length -= h.speed;
+                const tip = getHookTip();
+
+                if (h.targetMineral && h.targetMineral.alive) {
+                    const m = h.targetMineral;
+                    m.x = tip.x;
+                    m.y = tip.y;
+                    if (h.length <= 20) {
+                        const value = m.value;
+                        game.score += value;
+                        addParticles(CONFIG.minerX, CONFIG.minerY - 20, m.color, 35);
+                        addFloatingText(CONFIG.minerX + rand(-40, 40), CONFIG.minerY - 60,
+                            `+${value}`, '#ffd700');
+                        m.alive = false;
+                        h.targetMineral = null;
+                        h.state = 'aiming';
+                        h.length = 18;
+                        game.chances--;
+                        updateUI();
+                        checkLevelStatus();
+                        return;
+                    }
+                } else {
+                    if (h.length <= 18) {
+                        h.state = 'aiming';
+                        h.length = 18;
+                        h.targetMineral = null;
+                        game.chances--;
+                        updateUI();
+                        checkLevelStatus();
+                        return;
+                    }
+                }
+
+                if (h.targetMineral && !h.targetMineral.alive) {
+                    h.targetMineral = null;
+                    h.state = 'aiming';
+                    h.length = 18;
+                    game.chances--;
+                    updateUI();
+                    checkLevelStatus();
+                }
+                return;
+            }
+        }
+
+        // ============================================================
+        //  关 卡 状 态 检 查
+        // ============================================================
+        function checkLevelStatus() {
+            if (game.isGameOver || game.isLevelComplete) return;
+
+            if (game.score >= game.target) {
+                game.isLevelComplete = true;
+                addFloatingText(W / 2, H / 2 - 40, '🎉 过关!', '#ffd700');
+                addFloatingText(W / 2, H / 2 + 20, `目标 ${game.target} 达成!`, '#74b9ff');
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        addParticles(rand(100, 700), rand(100, 400), '#ffd700', 30);
+                    }, i * 120);
+                }
+                return;
+            }
+
+            if (game.chances <= 0) {
+                game.isGameOver = true;
+                addFloatingText(W / 2, H / 2 - 30, '💔 游戏结束', '#ff6b6b');
+                addFloatingText(W / 2, H / 2 + 30, `最终分数: ${game.score}`, '#ffd700');
+                return;
+            }
+
+            const alive = game.minerals.filter(m => m.alive);
+            if (alive.length === 0 && game.score < game.target) {
+                game.isGameOver = true;
+                addFloatingText(W / 2, H / 2 - 30, '💔 矿物耗尽', '#ff6b6b');
+                addFloatingText(W / 2, H / 2 + 30, `最终分数: ${game.score}`, '#ffd700');
+            }
+        }
+
+        // ============================================================
+        //  进 入 下 一 关
+        // ============================================================
+        function nextLevel() {
+            game.level++;
+            game.target = CONFIG.targetBase + (game.level - 1) * CONFIG.targetPerLevel;
+            game.chances = CONFIG.chancesPerLevel;
+            game.isLevelComplete = false;
+            game.isGameOver = false;
+            game.minerals = generateMinerals(game.level);
+            game.hook.state = 'aiming';
+            game.hook.length = 18;
+            game.hook.targetMineral = null;
+            game.hook.angle = 0;
+            game.hook.dir = 1;
+            game.particles = [];
+            game.floatingTexts = [];
+            updateUI();
+            addFloatingText(W / 2, 60, `🏁 第 ${game.level} 关`, '#74b9ff');
+            addFloatingText(W / 2, 100, `目标: ${game.target} 分`, '#ffd700');
+        }
+
+        // ============================================================
+        //  UI 更 新
+        // ============================================================
+        function updateUI() {
+            scoreDisplay.textContent = game.score;
+            targetDisplay.textContent = game.target;
+            levelDisplay.textContent = game.level;
+            chancesDisplay.textContent = game.chances;
+        }
+
+        // ============================================================
+        //  渲 染
+        // ============================================================
+        function drawMiner() {
+            const x = CONFIG.minerX,
+                y = CONFIG.minerY;
+            const grad = ctx.createRadialGradient(x - 6, y - 8, 5, x, y, CONFIG.minerRadius + 4);
+            grad.addColorStop(0, '#6c5ce7');
+            grad.addColorStop(0.7, '#4a3db8');
+            grad.addColorStop(1, '#2d1f7a');
+            ctx.beginPath();
+            ctx.arc(x, y, CONFIG.minerRadius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = '#8a7ae8';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#2d1f7a';
+            ctx.beginPath();
+            ctx.ellipse(x, y - CONFIG.minerRadius + 4, 24, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#6c5ce7';
+            ctx.beginPath();
+            ctx.ellipse(x, y - CONFIG.minerRadius - 2, 18, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x - 10, y - 8, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 10, y - 8, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1a1a2e';
+            ctx.beginPath();
+            ctx.arc(x - 8, y - 6, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 12, y - 6, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y + 4, 10, 0.1, Math.PI - 0.1);
+            ctx.stroke();
+        }
+
+        function drawHook() {
+            const h = game.hook;
+            const sx = CONFIG.minerX,
+                sy = CONFIG.minerY;
+            const tip = getHookTip();
+
+            // 绳索 — 加粗
+            const grad = ctx.createLinearGradient(sx, sy, tip.x, tip.y);
+            grad.addColorStop(0, '#ffd700');
+            grad.addColorStop(0.5, '#f0c040');
+            grad.addColorStop(1, '#d4a020');
+            ctx.beginPath();
+            ctx.moveTo(sx, sy - 4);
+            ctx.lineTo(tip.x, tip.y);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 6;        // 原4 → 6
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 14;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // 钩爪放大
+            const angle = h.angle;
+            const len = 20;            // 原14 → 20
+            const centerR = 8;         // 原5 → 8
+            const clawR = 4;           // 原2.5 → 4
+
+            ctx.fillStyle = '#c0a060';
+            ctx.strokeStyle = '#b89050';
+            ctx.lineWidth = 2.5;
+
+            // 中心圆
+            ctx.beginPath();
+            ctx.arc(tip.x, tip.y, centerR, 0, Math.PI * 2);
+            ctx.fillStyle = '#d4b060';
+            ctx.fill();
+            ctx.stroke();
+
+            // 三个爪臂
+            for (let i = -1; i <= 1; i++) {
+                const a = angle + i * 0.4 + (h.state === 'aiming' ? 0 : 0.2);
+                const px = tip.x + Math.sin(a) * len;
+                const py = tip.y - Math.cos(a) * len;
+                ctx.beginPath();
+                ctx.moveTo(tip.x, tip.y);
+                ctx.lineTo(px, py);
+                ctx.strokeStyle = '#b89050';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                // 爪尖圆
+                ctx.beginPath();
+                ctx.arc(px, py, clawR, 0, Math.PI * 2);
+                ctx.fillStyle = '#c0a060';
+                ctx.fill();
+            }
+
+            // 中心亮点
+            ctx.beginPath();
+            ctx.arc(tip.x, tip.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff5d0';
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 25;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 瞄准指示线（保持不变）
+            if (h.state === 'aiming') {
+                const dashLen = 40;
+                const dx = Math.sin(angle) * dashLen;
+                const dy = -Math.cos(angle) * dashLen;
+                ctx.setLineDash([4, 8]);
+                ctx.strokeStyle = 'rgba(255,215,0,0.15)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(sx + dx * 0.5, sy + dy * 0.5);
+                ctx.lineTo(sx + dx, sy + dy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawMineral(m) {
+            if (!m.alive) return;
+            const x = m.x,
+                y = m.y,
+                r = m.radius * m.scale;
+
+            const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2);
+            glow.addColorStop(0, m.glow + '40');
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(x, y, r * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+            grad.addColorStop(0, '#ffffffdd');
+            grad.addColorStop(0.3, m.color);
+            grad.addColorStop(0.9, m.color);
+            grad.addColorStop(1, '#00000055');
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.shadowColor = m.glow;
+            ctx.shadowBlur = 25;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fill();
+
+            if (m.type === 'diamond') {
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1.5;
+                for (let i = 0; i < 4; i++) {
+                    const a = i * Math.PI / 2 + m.sparkle;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8);
+                    ctx.stroke();
+                }
+                m.sparkle += 0.05;
+            }
+
+            if (m.captured) {
+                ctx.beginPath();
+                ctx.arc(x, y, r + 6, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255,215,0,${0.4 + Math.sin(Date.now() / 100) * 0.3})`;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 30;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            if (m.value >= 100) {
+                ctx.fillStyle = 'rgba(255,215,0,0.6)';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('$' + m.value, x, y + r + 16);
+            }
+        }
+
+        function drawParticles() {
+            for (const p of game.particles) {
+                const alpha = p.life / p.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius * alpha, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function drawFloatingTexts() {
+            for (const ft of game.floatingTexts) {
+                const alpha = ft.life / 60;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = ft.color;
+                ctx.font = `bold ${28 * ft.scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur = 20;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.shadowBlur = 0;
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function drawBackground() {
+            const grad = ctx.createLinearGradient(0, CONFIG.minerY + 30, 0, H);
+            grad.addColorStop(0, 'rgba(30,25,50,0)');
+            grad.addColorStop(0.3, 'rgba(30,25,50,0.3)');
+            grad.addColorStop(1, 'rgba(20,15,30,0.8)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, CONFIG.minerY + 30, W, H - CONFIG.minerY - 30);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.03)';
+            for (let i = 0; i < 30; i++) {
+                const x = (i * 137 + 50) % W;
+                const y = (i * 97 + 20) % (CONFIG.minerY - 40);
+                ctx.beginPath();
+                ctx.arc(x, y, 1 + i % 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const glow2 = ctx.createRadialGradient(W / 2, H, 10, W / 2, H, 350);
+            glow2.addColorStop(0, 'rgba(255,215,0,0.03)');
+            glow2.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow2;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.04)';
+            ctx.font = '120px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('⛏️', W / 2, H - 40);
+
+            // ---------- 版本号（右上角） ----------
+            ctx.fillStyle = 'rgba(255,255,255,0.20)';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText('v1.2', W - 16, 12);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#ff6b6b';
+            ctx.font = 'bold 56px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#ff6b6b';
+            ctx.shadowBlur = 40;
+            ctx.fillText('💔 游戏结束', W / 2, H / 2 - 40);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffd700';
+            ctx.font = '32px Arial';
+            ctx.fillText(`最终得分: ${game.score}`, W / 2, H / 2 + 40);
+            ctx.fillStyle = '#aabbdd';
+            ctx.font = '20px Arial';
+            ctx.fillText('点击 "重新开始" 再来一局', W / 2, H / 2 + 100);
+        }
+
+        function drawLevelComplete() {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 56px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 50;
+            ctx.fillText('🎉 过关!', W / 2, H / 2 - 40);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#74b9ff';
+            ctx.font = '28px Arial';
+            ctx.fillText(`得分: ${game.score}  /  目标: ${game.target}`, W / 2, H / 2 + 40);
+            ctx.fillStyle = '#aabbdd';
+            ctx.font = '20px Arial';
+            ctx.fillText('点击任意位置进入下一关', W / 2, H / 2 + 100);
+        }
+
+        // ============================================================
+        //  主 循 环
+        // ============================================================
+        function update() {
+            for (let i = game.particles.length - 1; i >= 0; i--) {
+                const p = game.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05;
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    game.particles.splice(i, 1);
+                }
+            }
+
+            for (let i = game.floatingTexts.length - 1; i >= 0; i--) {
+                const ft = game.floatingTexts[i];
+                ft.y += ft.vy;
+                ft.life--;
+                ft.scale *= 0.995;
+                if (ft.life <= 0) {
+                    game.floatingTexts.splice(i, 1);
+                }
+            }
+
+            if (!game.isGameOver && !game.isLevelComplete) {
+                updateHook();
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            drawBackground();
+            for (const m of game.minerals) {
+                drawMineral(m);
+            }
+            drawHook();
+            drawMiner();
+            drawParticles();
+            drawFloatingTexts();
+
+            if (game.isGameOver) {
+                drawGameOver();
+            } else if (game.isLevelComplete) {
+                drawLevelComplete();
+            }
+
+            ctx.fillStyle = 'rgba(255,215,0,0.06)';
+            ctx.fillRect(0, 0, W, 2);
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            game.animId = requestAnimationFrame(gameLoop);
+        }
+
+        // ============================================================
+        //  初 始 化 游 戏
+        // ============================================================
+        function initGame() {
+            if (game.animId) {
+                cancelAnimationFrame(game.animId);
+                game.animId = null;
+            }
+
+            game.score = 0;
+            game.level = 1;
+            game.target = CONFIG.targetBase;
+            game.chances = CONFIG.chancesPerLevel;
+            game.isGameOver = false;
+            game.isLevelComplete = false;
+            game.particles = [];
+            game.floatingTexts = [];
+
+            game.hook.angle = 0;
+            game.hook.length = 18;
+            game.hook.state = 'aiming';
+            game.hook.targetMineral = null;
+            game.hook.dir = 1;
+            game.hook.speed = 0;
+
+            game.minerals = generateMinerals(1);
+            updateUI();
+
+            if (game.animId) cancelAnimationFrame(game.animId);
+            gameLoop();
+
+            addFloatingText(W / 2, 50, '⛏️ 黄金矿工', '#ffd700');
+            addFloatingText(W / 2, 100, `第 ${game.level} 关  ·  目标 ${game.target} 分`, '#74b9ff');
+        }
+
+        // ============================================================
+        //  事 件 绑 定
+        // ============================================================
+        canvas.addEventListener('click', (e) => {
+            if (game.isGameOver) return;
+            if (game.isLevelComplete) {
+                nextLevel();
+                return;
+            }
+            startShooting();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (game.isGameOver) return;
+            if (game.isLevelComplete) {
+                nextLevel();
+                return;
+            }
+            startShooting();
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            initGame();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Space') {
+                e.preventDefault();
+                if (game.isGameOver) return;
+                if (game.isLevelComplete) {
+                    nextLevel();
+                    return;
+                }
+                startShooting();
+            }
+            if (e.key === 'r' || e.key === 'R') {
+                initGame();
+            }
+        });
+
+        // ============================================================
+        //  启 动
+        // ============================================================
+        initGame();
+        console.log('🎮 黄金矿工 v1.2 已启动！');
+        console.log('💡 点击画布或按空格键发射钩子');
+        console.log('💡 按 R 键重新开始');
+        console.log('🎯 每关目标递增400，挑战升级！');
+    </script>
+</body>
+</html>
