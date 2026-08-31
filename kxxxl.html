@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>开心消消乐 - 简易版</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --card-bg: #16213e;
+            --text: #ffffff;
+            --accent: #e94560;
+            --gold: #ffd700;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #2a2a4a 0%, #1a1a2e 70%);
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(233, 69, 96, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            max-width: 95vw;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 4px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .title {
+            font-size: 1.6em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease-in-out infinite;
+            letter-spacing: 1px;
+        }
+
+        @keyframes gradientShift {
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .score-box {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 8px 16px;
+            text-align: center;
+            min-width: 80px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .score-label {
+            font-size: 0.7em;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .score-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--gold);
+            line-height: 1.2;
+            transition: transform 0.2s;
+        }
+
+        .score-value.pop {
+            animation: popScore 0.4s ease-out;
+        }
+
+        @keyframes popScore {
+            0% {
+                transform: scale(1);
+            }
+            40% {
+                transform: scale(1.4);
+                color: #ff6b6b;
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 14px;
+            border: none;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ddd;
+            box-shadow: none;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: none;
+        }
+
+        canvas {
+            border-radius: 16px;
+            cursor: pointer;
+            display: block;
+            background: #0f0f23;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4), 0 8px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            height: auto;
+            max-width: 480px;
+            aspect-ratio: 1;
+            touch-action: manipulation;
+        }
+
+        .hint-bar {
+            font-size: 0.85em;
+            color: #aaa;
+            text-align: center;
+            min-height: 1.4em;
+            transition: opacity 0.3s;
+            letter-spacing: 0.5px;
+        }
+        .hint-bar.flash {
+            color: #ffd93d;
+        }
+
+        .combo-indicator {
+            position: absolute;
+            font-size: 2.5em;
+            font-weight: 900;
+            pointer-events: none;
+            color: #ffd93d;
+            text-shadow: 0 0 20px rgba(255, 217, 61, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        .combo-indicator.show {
+            opacity: 1;
+            transform: scale(1.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="header">
+            <span class="title">✨ 开心消消乐</span>
+            <div class="score-display">
+                <div class="score-box">
+                    <div class="score-label">分数</div>
+                    <div class="score-value" id="scoreValue">0</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">连击</div>
+                    <div class="score-value" id="chainValue" style="color:#ff6b6b;">0</div>
+                </div>
+            </div>
+            <button class="btn" id="restartBtn">🔄 重开</button>
+        </div>
+        <div style="position:relative;">
+            <canvas id="gameCanvas"></canvas>
+            <div class="combo-indicator" id="comboIndicator"></div>
+        </div>
+        <div class="hint-bar" id="hintBar">点击相邻的方块进行交换，三个相同即可消除！</div>
+    </div>
+
+    <script>
+        (function() {
+            // ============ 常量配置 ============
+            const ROWS = 8;
+            const COLS = 8;
+            const NUM_COLORS = 6;
+            const CELL_SIZE = 60;
+            const CANVAS_SIZE = ROWS * CELL_SIZE; // 480
+            const SWAP_DURATION = 220;
+            const REMOVE_DURATION = 280;
+            const FALL_DURATION = 320;
+            const CHECK_DELAY = 50;
+
+            const COLORS = [
+                '#FF6B6B', // 珊瑚红
+                '#FFA94D', // 橙色
+                '#FFD93D', // 金黄色
+                '#6BCB77', // 草绿色
+                '#4D96FF', // 天蓝色
+                '#B06AB3', // 紫色
+            ];
+
+            const COLORS_LIGHT = [
+                '#FF9999', '#FFC088', '#FFE680', '#99DFAA', '#80B8FF', '#D099D3'
+            ];
+
+            const COLORS_DARK = [
+                '#CC4444', '#CC7733', '#CCAA22', '#449955', '#3366CC', '#884499'
+            ];
+
+            // ============ DOM 元素 ============
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreEl = document.getElementById('scoreValue');
+            const chainEl = document.getElementById('chainValue');
+            const hintBar = document.getElementById('hintBar');
+            const restartBtn = document.getElementById('restartBtn');
+            const comboIndicator = document.getElementById('comboIndicator');
+
+            // ============ 高DPI支持 ============
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = CANVAS_SIZE * dpr;
+            canvas.height = CANVAS_SIZE * dpr;
+            canvas.style.width = CANVAS_SIZE + 'px';
+            canvas.style.height = CANVAS_SIZE + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // ============ 游戏状态 ============
+            let board = [];
+            let selected = null; // { row, col } 或 null
+            let gameState = 'idle'; // 'idle' | 'selected' | 'swapping' | 'swapBack' | 'checking' | 'removing' | 'falling'
+            let score = 0;
+            let chainMultiplier = 1;
+            let matchCount = 0; // 连续消除次数（用于连锁）
+            let isDeadLocked = false;
+
+            // 动画状态
+            let swapAnim = null; // { fromRow, fromCol, toRow, toCol, startTime, duration }
+            let removeAnim = null; // { positions: [{row,col}], startTime, duration }
+            let fallAnim = null; // { moves: [{fromRow, toRow, col, color, isNew}], startTime, duration }
+            let scorePopTimeout = null;
+
+            // ============ 工具函数 ============
+            function getRandomColor() {
+                return Math.floor(Math.random() * NUM_COLORS);
+            }
+
+            function isValidPos(row, col) {
+                return row >= 0 && row < ROWS && col >= 0 && col < COLS;
+            }
+
+            function isAdjacent(r1, c1, r2, c2) {
+                return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+            }
+
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+
+            function easeInOutQuad(t) {
+                return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            }
+
+            // ============ 棋盘生成（无三连） ============
+            function wouldCreateMatch(row, col, color) {
+                // 检查左边两个
+                if (col >= 2 && board[row][col - 1] === color && board[row][col - 2] === color) return true;
+                // 检查上边两个
+                if (row >= 2 && board[row - 1][col] === color && board[row - 2][col] === color) return true;
+                return false;
+            }
+
+            function generateBoard() {
+                board = [];
+                for (let row = 0; row < ROWS; row++) {
+                    board[row] = [];
+                    for (let col = 0; col < COLS; col++) {
+                        let color;
+                        let attempts = 0;
+                        do {
+                            color = getRandomColor();
+                            attempts++;
+                            if (attempts > 100) break; // 安全防护
+                        } while (wouldCreateMatch(row, col, color));
+                        board[row][col] = color;
+                    }
+                }
+            }
+
+            // ============ 匹配检测 ============
+            function findMatches() {
+                const marked = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+                let hasMatch = false;
+
+                // 横向扫描
+                for (let row = 0; row < ROWS; row++) {
+                    let col = 0;
+                    while (col < COLS) {
+                        const color = board[row][col];
+                        if (color === -1) { col++; continue; }
+                        let endCol = col;
+                        while (endCol + 1 < COLS && board[row][endCol + 1] === color) endCol++;
+                        if (endCol - col >= 2) {
+                            for (let c = col; c <= endCol; c++) marked[row][c] = true;
+                            hasMatch = true;
+                        }
+                        col = endCol + 1;
+                    }
+                }
+
+                // 纵向扫描
+                for (let col = 0; col < COLS; col++) {
+                    let row = 0;
+                    while (row < ROWS) {
+                        const color = board[row][col];
+                        if (color === -1) { row++; continue; }
+                        let endRow = row;
+                        while (endRow + 1 < ROWS && board[endRow + 1][col] === color) endRow++;
+                        if (endRow - row >= 2) {
+                            for (let r = row; r <= endRow; r++) marked[r][col] = true;
+                            hasMatch = true;
+                        }
+                        row = endRow + 1;
+                    }
+                }
+
+                if (!hasMatch) return null;
+
+                const positions = [];
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (marked[r][c]) positions.push({ row: r, col: c });
+                    }
+                }
+                return positions;
+            }
+
+            // ============ 检测可能的移动 ============
+            function hasPossibleMoves() {
+                for (let row = 0; row < ROWS; row++) {
+                    for (let col = 0; col < COLS; col++) {
+                        // 尝试与右边交换
+                        if (col + 1 < COLS) {
+                            swapBoard(row, col, row, col + 1);
+                            if (findMatches()) { swapBoard(row, col, row, col + 1); return true; }
+                            swapBoard(row, col, row, col + 1);
+                        }
+                        // 尝试与下边交换
+                        if (row + 1 < ROWS) {
+                            swapBoard(row, col, row + 1, col);
+                            if (findMatches()) { swapBoard(row, col, row + 1, col); return true; }
+                            swapBoard(row, col, row + 1, col);
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function swapBoard(r1, c1, r2, c2) {
+                const temp = board[r1][c1];
+                board[r1][c1] = board[r2][c2];
+                board[r2][c2] = temp;
+            }
+
+            // ============ 洗牌 ============
+            function shuffleBoard() {
+                const colors = [];
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        colors.push(board[r][c]);
+                    }
+                }
+                // Fisher-Yates 洗牌
+                for (let i = colors.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [colors[i], colors[j]] = [colors[j], colors[i]];
+                }
+
+                let attempts = 0;
+                const maxAttempts = 200;
+                while (attempts < maxAttempts) {
+                    // 重新排列
+                    let idx = 0;
+                    const tempBoard = [];
+                    for (let r = 0; r < ROWS; r++) {
+                        tempBoard[r] = [];
+                        for (let c = 0; c < COLS; c++) {
+                            tempBoard[r][c] = colors[idx++];
+                        }
+                    }
+                    // 检查是否有三连
+                    const savedBoard = board;
+                    board = tempBoard;
+                    if (!findMatches() && hasPossibleMoves()) {
+                        // 成功洗牌
+                        board = tempBoard;
+                        return;
+                    }
+                    board = savedBoard;
+                    // 再次打乱
+                    for (let i = colors.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [colors[i], colors[j]] = [colors[j], colors[i]];
+                    }
+                    attempts++;
+                }
+                // 如果无法洗牌，重新生成棋盘
+                generateBoard();
+                // 确保有可用的移动
+                if (!hasPossibleMoves()) {
+                    generateBoard();
+                }
+            }
+
+            // ============ 下落逻辑 ============
+            function applyGravityAndFill() {
+                const moves = [];
+                for (let col = 0; col < COLS; col++) {
+                    // 收集该列的非空方块（从底部到顶部）
+                    const nonEmpty = [];
+                    for (let row = ROWS - 1; row >= 0; row--) {
+                        if (board[row][col] !== -1) {
+                            nonEmpty.push({ row, color: board[row][col] });
+                        }
+                    }
+                    // 清空该列
+                    for (let row = 0; row < ROWS; row++) {
+                        board[row][col] = -1;
+                    }
+                    // 从底部开始放置
+                    let targetRow = ROWS - 1;
+                    for (const item of nonEmpty) {
+                        if (item.row !== targetRow) {
+                            moves.push({
+                                fromRow: item.row,
+                                toRow: targetRow,
+                                col,
+                                color: item.color,
+                                isNew: false
+                            });
+                        }
+                        board[targetRow][col] = item.color;
+                        targetRow--;
+                    }
+                    // 生成新方块填补顶部空位
+                    const emptySlots = targetRow + 1;
+                    for (let i = 0; i < emptySlots; i++) {
+                        const newColor = getRandomColor();
+                        board[i][col] = newColor;
+                        moves.push({
+                            fromRow: i - emptySlots,
+                            toRow: i,
+                            col,
+                            color: newColor,
+                            isNew: true
+                        });
+                    }
+                }
+                return moves;
+            }
+
+            // ============ 分数更新 ============
+            function addScore(points) {
+                score += points;
+                updateScoreUI();
+                // 触发分数弹跳动画
+                if (scorePopTimeout) clearTimeout(scorePopTimeout);
+                scoreEl.classList.remove('pop');
+                void scoreEl.offsetWidth; // 强制回流
+                scoreEl.classList.add('pop');
+                scorePopTimeout = setTimeout(() => scoreEl.classList.remove('pop'), 400);
+            }
+
+            function updateScoreUI() {
+                scoreEl.textContent = score;
+                chainEl.textContent = chainMultiplier > 1 ? chainMultiplier + 'x' : '0';
+                if (chainMultiplier > 1) {
+                    chainEl.style.color = '#ff6b6b';
+                } else {
+                    chainEl.style.color = '#888';
+                }
+            }
+
+            function showCombo(text) {
+                comboIndicator.textContent = text;
+                comboIndicator.classList.add('show');
+                setTimeout(() => comboIndicator.classList.remove('show'), 600);
+            }
+
+            function setHint(text, isFlash = false) {
+                hintBar.textContent = text;
+                if (isFlash) {
+                    hintBar.classList.add('flash');
+                    setTimeout(() => hintBar.classList.remove('flash'), 1500);
+                }
+            }
+
+            // ============ 游戏状态管理 ============
+            function startSwap(fromRow, fromCol, toRow, toCol) {
+                gameState = 'swapping';
+                swapAnim = {
+                    fromRow,
+                    fromCol,
+                    toRow,
+                    toCol,
+                    startTime: performance.now(),
+                    duration: SWAP_DURATION
+                };
+            }
+
+            function startSwapBack(fromRow, fromCol, toRow, toCol) {
+                gameState = 'swapBack';
+                swapAnim = {
+                    fromRow: toRow,
+                    fromCol: toCol,
+                    toRow: fromRow,
+                    toCol: fromCol,
+                    startTime: performance.now(),
+                    duration: SWAP_DURATION
+                };
+            }
+
+            function startRemoving(positions) {
+                gameState = 'removing';
+                removeAnim = {
+                    positions,
+                    startTime: performance.now(),
+                    duration: REMOVE_DURATION
+                };
+                // 计算分数
+                const points = positions.length * 10 * chainMultiplier;
+                addScore(points);
+                if (chainMultiplier > 1) {
+                    showCombo('🔥 ' + chainMultiplier + 'x 连击!');
+                }
+                // 增加连锁倍数
+                chainMultiplier++;
+                updateScoreUI();
+            }
+
+            function startFalling(moves) {
+                gameState = 'falling';
+                fallAnim = {
+                    moves,
+                    startTime: performance.now(),
+                    duration: FALL_DURATION
+                };
+            }
+
+            function checkAndProcessMatches() {
+                const matches = findMatches();
+                if (matches && matches.length > 0) {
+                    startRemoving(matches);
+                } else {
+                    // 没有更多匹配
+                    chainMultiplier = 1;
+                    updateScoreUI();
+                    gameState = 'idle';
+                    selected = null;
+                    // 检查死局
+                    if (!hasPossibleMoves()) {
+                        setHint('😅 没有可用的移动，正在洗牌...', true);
+                        isDeadLocked = true;
+                        setTimeout(() => {
+                            shuffleBoard();
+                            isDeadLocked = false;
+                            setHint('🔄 已洗牌，继续游戏！');
+                            gameState = 'idle';
+                            selected = null;
+                        }, 600);
+                    } else {
+                        setHint('点击相邻的方块进行交换，三个相同即可消除！');
+                    }
+                }
+            }
+
+            // ============ 点击处理 ============
+            function handleClick(event) {
+                if (isDeadLocked) return;
+                if (gameState !== 'idle' && gameState !== 'selected') return;
+
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = CANVAS_SIZE / rect.width;
+                const scaleY = CANVAS_SIZE / rect.height;
+                const x = (event.clientX - rect.left) * scaleX;
+                const y = (event.clientY - rect.top) * scaleY;
+
+                const col = Math.floor(x / CELL_SIZE);
+                const row = Math.floor(y / CELL_SIZE);
+
+                if (!isValidPos(row, col)) return;
+                if (board[row][col] === -1) return;
+
+                if (gameState === 'idle') {
+                    // 选中第一个方块
+                    selected = { row, col };
+                    gameState = 'selected';
+                    setHint('再点击相邻的方块进行交换');
+                } else if (gameState === 'selected') {
+                    if (selected.row === row && selected.col === col) {
+                        // 取消选中
+                        selected = null;
+                        gameState = 'idle';
+                        setHint('点击相邻的方块进行交换，三个相同即可消除！');
+                    } else if (isAdjacent(selected.row, selected.col, row, col)) {
+                        // 交换
+                        const sr = selected.row,
+                            sc = selected.col;
+                        selected = null;
+                        startSwap(sr, sc, row, col);
+                    } else {
+                        // 选中新方块
+                        selected = { row, col };
+                        setHint('再点击相邻的方块进行交换');
+                    }
+                }
+            }
+
+            // ============ 绘制函数 ============
+            function drawRoundedRect(x, y, w, h, radius, fill, stroke = null, lineWidth = 1) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + w - radius, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+                ctx.lineTo(x + w, y + h - radius);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+                ctx.lineTo(x + radius, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fillStyle = fill;
+                ctx.fill();
+                if (stroke) {
+                    ctx.strokeStyle = stroke;
+                    ctx.lineWidth = lineWidth;
+                    ctx.stroke();
+                }
+            }
+
+            function drawTile(row, col, color, offsetX = 0, offsetY = 0, scale = 1, alpha = 1) {
+                const cx = col * CELL_SIZE + CELL_SIZE / 2 + offsetX;
+                const cy = row * CELL_SIZE + CELL_SIZE / 2 + offsetY;
+                const size = CELL_SIZE * 0.82 * scale;
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+
+                // 阴影
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 8 * scale;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 3 * scale;
+
+                // 主方块
+                const radius = size * 0.25;
+                const x = cx - size / 2;
+                const y = cy - size / 2;
+                drawRoundedRect(x, y, size, size, radius, COLORS[color]);
+
+                // 高光
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                const hlGrad = ctx.createLinearGradient(x, y, x, y + size);
+                hlGrad.addColorStop(0, 'rgba(255,255,255,0.35)');
+                hlGrad.addColorStop(0.4, 'rgba(255,255,255,0.1)');
+                hlGrad.addColorStop(0.6, 'rgba(255,255,255,0)');
+                hlGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+                drawRoundedRect(x, y, size, size, radius, hlGrad);
+
+                // 边框
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 1.2 * scale;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + size - radius, y);
+                ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+                ctx.lineTo(x + size, y + size - radius);
+                ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+                ctx.lineTo(x + radius, y + size);
+                ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.stroke();
+
+                // 内部光泽
+                const shineGrad = ctx.createRadialGradient(cx - size * 0.2, cy - size * 0.25, size * 0.05, cx, cy, size *
+                    0.6);
+                shineGrad.addColorStop(0, 'rgba(255,255,255,0.45)');
+                shineGrad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+                shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = shineGrad;
+                ctx.beginPath();
+                ctx.arc(cx - size * 0.15, cy - size * 0.15, size * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            function drawSelectedIndicator(row, col) {
+                const cx = col * CELL_SIZE + CELL_SIZE / 2;
+                const cy = row * CELL_SIZE + CELL_SIZE / 2;
+                const size = CELL_SIZE * 0.9;
+
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3.5;
+                ctx.shadowColor = 'rgba(255,255,255,0.8)';
+                ctx.shadowBlur = 12;
+                const radius = size * 0.25;
+                const x = cx - size / 2;
+                const y = cy - size / 2;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + size - radius, y);
+                ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+                ctx.lineTo(x + size, y + size - radius);
+                ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+                ctx.lineTo(x + radius, y + size);
+                ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.stroke();
+
+                // 脉冲效果
+                const pulse = (Math.sin(performance.now() / 200) + 1) / 2;
+                ctx.strokeStyle = `rgba(255,255,255,${0.2 + pulse * 0.4})`;
+                ctx.lineWidth = 6;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = `rgba(255,255,255,${0.4 + pulse * 0.3})`;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + size - radius, y);
+                ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+                ctx.lineTo(x + size, y + size - radius);
+                ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+                ctx.lineTo(x + radius, y + size);
+                ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            function drawBoard() {
+                ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+                // 背景网格
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const x = c * CELL_SIZE;
+                        const y = r * CELL_SIZE;
+                        ctx.fillStyle = (r + c) % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+
+                // 收集所有需要绘制的方块
+                const tilesToDraw = [];
+                const positionsToSkip = new Set();
+
+                // 处理下落动画
+                if (fallAnim && gameState === 'falling') {
+                    const progress = Math.min((performance.now() - fallAnim.startTime) / fallAnim.duration, 1);
+                    const easedProgress = easeOutCubic(progress);
+
+                    for (const move of fallAnim.moves) {
+                        const fromY = move.fromRow * CELL_SIZE;
+                        const toY = move.toRow * CELL_SIZE;
+                        const currentY = fromY + (toY - fromY) * easedProgress;
+                        const offsetY = currentY - (move.toRow * CELL_SIZE);
+                        tilesToDraw.push({
+                            row: move.toRow,
+                            col: move.col,
+                            color: move.color,
+                            offsetY,
+                            scale: 1,
+                            alpha: 1
+                        });
+                        positionsToSkip.add(move.toRow + ',' + move.col);
+                    }
+                }
+
+                // 处理消除动画
+                const removingPositions = new Set();
+                if (removeAnim && gameState === 'removing') {
+                    const progress = Math.min((performance.now() - removeAnim.startTime) / removeAnim.duration, 1);
+                    for (const pos of removeAnim.positions) {
+                        removingPositions.add(pos.row + ',' + pos.col);
+                        const scale = 1 - progress;
+                        const alpha = 1 - progress;
+                        if (scale > 0.01) {
+                            tilesToDraw.push({
+                                row: pos.row,
+                                col: pos.col,
+                                color: board[pos.row][pos.col],
+                                offsetY: 0,
+                                scale,
+                                alpha,
+                                isRemoving: true
+                            });
+                        }
+                        positionsToSkip.add(pos.row + ',' + pos.col);
+                    }
+                }
+
+                // 处理交换动画
+                if (swapAnim && (gameState === 'swapping' || gameState === 'swapBack')) {
+                    const progress = Math.min((performance.now() - swapAnim.startTime) / swapAnim.duration, 1);
+                    const easedProgress = easeInOutQuad(progress);
+
+                    const fromOffsetX = (swapAnim.toCol - swapAnim.fromCol) * CELL_SIZE * easedProgress;
+                    const fromOffsetY = (swapAnim.toRow - swapAnim.fromRow) * CELL_SIZE * easedProgress;
+                    const toOffsetX = (swapAnim.fromCol - swapAnim.toCol) * CELL_SIZE * easedProgress;
+                    const toOffsetY = (swapAnim.fromRow - swapAnim.toRow) * CELL_SIZE * easedProgress;
+
+                    tilesToDraw.push({
+                        row: swapAnim.fromRow,
+                        col: swapAnim.fromCol,
+                        color: board[swapAnim.fromRow][swapAnim.fromCol],
+                        offsetX: fromOffsetX,
+                        offsetY: fromOffsetY,
+                        scale: 1,
+                        alpha: 1,
+                        isSwapping: true
+                    });
+                    tilesToDraw.push({
+                        row: swapAnim.toRow,
+                        col: swapAnim.toCol,
+                        color: board[swapAnim.toRow][swapAnim.toCol],
+                        offsetX: toOffsetX,
+                        offsetY: toOffsetY,
+                        scale: 1,
+                        alpha: 1,
+                        isSwapping: true
+                    });
+                    positionsToSkip.add(swapAnim.fromRow + ',' + swapAnim.fromCol);
+                    positionsToSkip.add(swapAnim.toRow + ',' + swapAnim.toCol);
+                }
+
+                // 绘制常规方块（跳过动画中的方块）
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const key = r + ',' + c;
+                        if (positionsToSkip.has(key)) continue;
+                        if (board[r][c] !== -1) {
+                            tilesToDraw.push({
+                                row: r,
+                                col: c,
+                                color: board[r][c],
+                                offsetX: 0,
+                                offsetY: 0,
+                                scale: 1,
+                                alpha: 1
+                            });
+                        }
+                    }
+                }
+
+                // 绘制所有方块
+                for (const tile of tilesToDraw) {
+                    drawTile(
+                        tile.row, tile.col, tile.color,
+                        tile.offsetX || 0, tile.offsetY || 0,
+                        tile.scale !== undefined ? tile.scale : 1,
+                        tile.alpha !== undefined ? tile.alpha : 1
+                    );
+                }
+
+                // 绘制选中指示器
+                if (selected && gameState === 'selected') {
+                    drawSelectedIndicator(selected.row, selected.col);
+                }
+
+                // 绘制消除粒子效果
+                if (removeAnim && gameState === 'removing') {
+                    const progress = Math.min((performance.now() - removeAnim.startTime) / removeAnim.duration, 1);
+                    for (const pos of removeAnim.positions) {
+                        const cx = pos.col * CELL_SIZE + CELL_SIZE / 2;
+                        const cy = pos.row * CELL_SIZE + CELL_SIZE / 2;
+                        const particleCount = 6;
+                        for (let i = 0; i < particleCount; i++) {
+                            const angle = (i / particleCount) * Math.PI * 2 + progress * 3;
+                            const dist = progress * CELL_SIZE * 1.2;
+                            const px = cx + Math.cos(angle) * dist;
+                            const py = cy + Math.sin(angle) * dist;
+                            const size = CELL_SIZE * 0.15 * (1 - progress);
+                            if (size > 0.5) {
+                                ctx.save();
+                                ctx.globalAlpha = 1 - progress;
+                                ctx.fillStyle = COLORS_LIGHT[board[pos.row][pos.col]] || '#fff';
+                                ctx.beginPath();
+                                ctx.arc(px, py, size, 0, Math.PI * 2);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ============ 游戏循环 ============
+            let lastTime = 0;
+
+            function gameLoop(timestamp) {
+                if (!lastTime) lastTime = timestamp;
+                const deltaTime = timestamp - lastTime;
+                lastTime = timestamp;
+
+                // 状态机更新
+                switch (gameState) {
+                    case 'swapping':
+                        if (swapAnim && timestamp - swapAnim.startTime >= swapAnim.duration) {
+                            // 交换完成，更新棋盘
+                            const { fromRow, fromCol, toRow, toCol } = swapAnim;
+                            swapBoard(fromRow, fromCol, toRow, toCol);
+                            swapAnim = null;
+                            // 检查匹配
+                            gameState = 'checking';
+                            checkAndProcessMatches();
+                        }
+                        break;
+                    case 'swapBack':
+                        if (swapAnim && timestamp - swapAnim.startTime >= swapAnim.duration) {
+                            const { fromRow, fromCol, toRow, toCol } = swapAnim;
+                            swapBoard(fromRow, fromCol, toRow, toCol);
+                            swapAnim = null;
+                            gameState = 'idle';
+                            selected = null;
+                            setHint('这两个方块交换后无法消除，试试其他的！');
+                        }
+                        break;
+                    case 'removing':
+                        if (removeAnim && timestamp - removeAnim.startTime >= removeAnim.duration) {
+                            // 移除被消除的方块
+                            for (const pos of removeAnim.positions) {
+                                board[pos.row][pos.col] = -1;
+                            }
+                            removeAnim = null;
+                            // 下落
+                            const moves = applyGravityAndFill();
+                            if (moves.length > 0) {
+                                startFalling(moves);
+                            } else {
+                                gameState = 'checking';
+                                checkAndProcessMatches();
+                            }
+                        }
+                        break;
+                    case 'falling':
+                        if (fallAnim && timestamp - fallAnim.startTime >= fallAnim.duration) {
+                            fallAnim = null;
+                            // 检查新的匹配（连锁）
+                            gameState = 'checking';
+                            checkAndProcessMatches();
+                        }
+                        break;
+                    case 'checking':
+                        // 在checkAndProcessMatches中处理，这里等待
+                        break;
+                    case 'idle':
+                    case 'selected':
+                        // 正常状态
+                        break;
+                }
+
+                // 绘制
+                drawBoard();
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            // ============ 重新开始 ============
+            function restartGame() {
+                score = 0;
+                chainMultiplier = 1;
+                matchCount = 0;
+                selected = null;
+                gameState = 'idle';
+                swapAnim = null;
+                removeAnim = null;
+                fallAnim = null;
+                isDeadLocked = false;
+                generateBoard();
+                if (!hasPossibleMoves()) {
+                    shuffleBoard();
+                }
+                updateScoreUI();
+                setHint('点击相邻的方块进行交换，三个相同即可消除！');
+                comboIndicator.classList.remove('show');
+            }
+
+            // ============ 事件绑定 ============
+            canvas.addEventListener('click', handleClick);
+
+            // 移动端触摸优化
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('click', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }, { passive: false });
+
+            restartBtn.addEventListener('click', restartGame);
+
+            // 键盘支持
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'r' || e.key === 'R') {
+                    restartGame();
+                }
+            });
+
+            // ============ 初始化 ============
+            function init() {
+                generateBoard();
+                if (!hasPossibleMoves()) {
+                    shuffleBoard();
+                }
+                updateScoreUI();
+                setHint('点击相邻的方块进行交换，三个相同即可消除！');
+                requestAnimationFrame(gameLoop);
+            }
+
+            init();
+
+            // ============ 响应式缩放 ============
+            function resizeCanvas() {
+                const container = document.getElementById('gameContainer');
+                const maxWidth = Math.min(window.innerWidth - 32, 480);
+                canvas.style.width = maxWidth + 'px';
+                canvas.style.height = maxWidth + 'px';
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            console.log('🎮 开心消消乐已加载！');
+            console.log('💡 提示：点击相邻方块交换，三个相同即可消除。按 R 键重新开始。');
+        })();
+    </script>
+</body>
+</html>
